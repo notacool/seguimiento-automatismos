@@ -35,4 +35,3 @@ func parseStateOrError(c *gin.Context, stateStr *string) (*entity.State, bool) {
 	}
 	return &parsedState, true
 }
-

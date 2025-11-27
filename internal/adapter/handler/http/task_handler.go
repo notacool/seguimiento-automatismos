@@ -220,7 +220,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 
 	// Convertir subtareas del request
 	subtaskInputs := make([]taskUsecase.UpdateSubtaskItemInput, 0, len(req.Subtasks))
-		for _, stReq := range req.Subtasks {
+	for _, stReq := range req.Subtasks {
 		var stID *uuid.UUID
 		if stReq.ID != nil {
 			parsedID, ok := parseUUIDOrError(c, *stReq.ID, entity.ErrSubtaskNotFound)
