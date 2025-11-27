@@ -1,0 +1,145 @@
+name: Release Version
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # v1.0.0, v1.2.3, etc.
+      - '*.*.*'    # 1.0.0, 1.2.3, etc.
+
+permissions:
+  contents: write  # Necesario para crear releases
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Necesario para obtener tags
+
+      - name: Get tag name
+        id: tag
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          # Remover 'v' si existe al inicio
+          VERSION=${TAG_NAME#v}
+          
+          # Validar formato X.Y.Z
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Error: El tag debe seguir el formato X.Y.Z o vX.Y.Z"
+            echo "Tag recibido: $TAG_NAME"
+            exit 1
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "✅ Versión extraída: $VERSION del tag: $TAG_NAME"
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update OpenAPI spec version
+        run: |
+          VERSION="${{ steps.tag.outputs.version }}"
+          # Actualizar la línea que contiene "version: " en la sección info
+          sed -i "s/^  version: .*/  version: $VERSION/" api/openapi/spec.yaml
+          echo "✅ Actualizado api/openapi/spec.yaml con versión $VERSION"
+
+      - name: Update OpenAPI generator config version
+        run: |
+          VERSION="${{ steps.tag.outputs.version }}"
+          # Actualizar packageVersion en el JSON
+          sed -i "s/\"packageVersion\": \".*\"/\"packageVersion\": \"$VERSION\"/" api/openapi-generator-config.json
+          echo "✅ Actualizado api/openapi-generator-config.json con versión $VERSION"
+
+      - name: Update CLI version
+        run: |
+          VERSION="${{ steps.tag.outputs.version }}"
+          # Actualizar la versión en el decorador @click.version_option
+          sed -i "s/@click.version_option(version='[^']*'/@click.version_option(version='$VERSION'/" scripts/cli/main.py
+          echo "✅ Actualizado scripts/cli/main.py con versión $VERSION"
+
+      - name: Verify changes
+        run: |
+          echo "📋 Verificando cambios realizados:"
+          echo ""
+          echo "OpenAPI spec:"
+          grep "version:" api/openapi/spec.yaml | head -1
+          echo ""
+          echo "OpenAPI generator config:"
+          grep "packageVersion" api/openapi-generator-config.json
+          echo ""
+          echo "CLI main.py:"
+          grep "version_option" scripts/cli/main.py | head -1
+
+      - name: Commit version updates
+        run: |
+          git add api/openapi/spec.yaml api/openapi-generator-config.json scripts/cli/main.py
+          if git diff --staged --quiet; then
+            echo "⚠️  No hay cambios para commitear"
+          else
+            git commit -m "chore: actualizar versión a ${{ steps.tag.outputs.version }} [skip ci]"
+            git push origin HEAD:${{ github.ref }}
+            echo "✅ Cambios de versión commiteados y pusheados"
+          fi
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          TAG_NAME="${{ steps.tag.outputs.tag_name }}"
+          VERSION="${{ steps.tag.outputs.version }}"
+          
+          # Intentar obtener notas desde CHANGELOG.md si existe
+          if [ -f CHANGELOG.md ]; then
+            echo "📝 Generando notas desde CHANGELOG.md"
+            # Extraer la sección correspondiente a esta versión
+            NOTES=$(awk "/^## \[?$VERSION\]?/ {flag=1; next} /^## \[?[0-9]/ {flag=0} flag" CHANGELOG.md || echo "")
+            if [ -n "$NOTES" ]; then
+              echo "notes<<EOF" >> $GITHUB_OUTPUT
+              echo "$NOTES" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            else
+              echo "notes=Release $TAG_NAME" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Generar notas básicas desde los últimos commits
+            echo "📝 Generando notas desde commits"
+            PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+            if [ -n "$PREV_TAG" ]; then
+              NOTES=$(git log --pretty=format:"- %s (%h)" ${PREV_TAG}..HEAD 2>/dev/null || echo "Release $TAG_NAME")
+            else
+              NOTES="Release $TAG_NAME"
+            fi
+            echo "notes<<EOF" >> $GITHUB_OUTPUT
+            echo "$NOTES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.tag_name }}
+          name: Release ${{ steps.tag.outputs.tag_name }}
+          body: ${{ steps.release_notes.outputs.notes }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release summary
+        run: |
+          echo "## 🎉 Release creado exitosamente" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: ${{ steps.tag.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Versión**: ${{ steps.tag.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Archivos actualizados**:">> $GITHUB_STEP_SUMMARY
+          echo "  - \`api/openapi/spec.yaml\`" >> $GITHUB_STEP_SUMMARY
+          echo "  - \`api/openapi-generator-config.json\`" >> $GITHUB_STEP_SUMMARY
+          echo "  - \`scripts/cli/main.py\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Release disponible en: https://github.com/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.tag_name }}" >> $GITHUB_STEP_SUMMARY
+
