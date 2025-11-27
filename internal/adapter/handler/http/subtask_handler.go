@@ -40,9 +40,8 @@ func NewSubtaskHandler(
 // Update maneja PUT /Subtask/{uuid}
 func (h *SubtaskHandler) Update(c *gin.Context) {
 	uuidStr := c.Param("uuid")
-	subtaskID, err := ParseUUID(uuidStr)
-	if err != nil {
-		MapErrorToProblemDetails(c, entity.ErrSubtaskNotFound)
+	subtaskID, ok := parseUUIDOrError(c, uuidStr, entity.ErrSubtaskNotFound)
+	if !ok {
 		return
 	}
 
@@ -61,14 +60,9 @@ func (h *SubtaskHandler) Update(c *gin.Context) {
 	}
 
 	// Parsear estado si se proporciona
-	var state *entity.State
-	if req.State != nil {
-		parsedState, err := ParseState(*req.State)
-		if err != nil {
-			MapErrorToProblemDetails(c, err)
-			return
-		}
-		state = &parsedState
+	state, ok := parseStateOrError(c, req.State)
+	if !ok {
+		return
 	}
 
 	input := subtaskUsecase.UpdateSubtaskInput{
@@ -90,9 +84,8 @@ func (h *SubtaskHandler) Update(c *gin.Context) {
 // Delete maneja DELETE /Subtask/{uuid}
 func (h *SubtaskHandler) Delete(c *gin.Context) {
 	uuidStr := c.Param("uuid")
-	subtaskID, err := ParseUUID(uuidStr)
-	if err != nil {
-		MapErrorToProblemDetails(c, entity.ErrSubtaskNotFound)
+	subtaskID, ok := parseUUIDOrError(c, uuidStr, entity.ErrSubtaskNotFound)
+	if !ok {
 		return
 	}
 
@@ -107,7 +100,7 @@ func (h *SubtaskHandler) Delete(c *gin.Context) {
 		DeletedBy: req.DeletedBy,
 	}
 
-	_, err = h.deleteUseCase.Execute(c.Request.Context(), input)
+	_, err := h.deleteUseCase.Execute(c.Request.Context(), input)
 	if err != nil {
 		MapErrorToProblemDetails(c, err)
 		return

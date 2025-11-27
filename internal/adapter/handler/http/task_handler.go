@@ -57,102 +57,137 @@ func NewTaskHandler(
 
 // Create maneja POST /Automatizacion
 func (h *TaskHandler) Create(c *gin.Context) {
-	var req CreateTaskRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		MapErrorToProblemDetails(c, entity.ErrMissingRequiredFields)
+	req, ok := h.bindAndValidateCreateRequest(c)
+	if !ok {
 		return
 	}
 
-	// Validar nombre
-	if err := entity.ValidateName(req.Name); err != nil {
+	initialState, ok := parseStateOrError(c, req.State)
+	if !ok {
+		return
+	}
+
+	input, ok := h.parseCreateInput(c, req)
+	if !ok {
+		return
+	}
+
+	output, err := h.createUseCase.Execute(c.Request.Context(), input)
+	if err != nil {
 		MapErrorToProblemDetails(c, err)
 		return
 	}
 
-	// Parsear estado si se proporciona
-	var initialState *entity.State
-	if req.State != nil {
-		state, err := ParseState(*req.State)
-		if err != nil {
-			MapErrorToProblemDetails(c, err)
-			return
-		}
-		initialState = &state
+	if !h.applyInitialState(c, output, initialState, req.CreatedBy) {
+		return
 	}
 
-	// Crear input para el use case
+	if !h.applyInitialSubtaskStates(c, output, req.Subtasks, req.CreatedBy) {
+		return
+	}
+
+	c.JSON(http.StatusCreated, ToTaskResponse(output.Task))
+}
+
+// bindAndValidateCreateRequest realiza el binding del request y valida el nombre de la tarea
+func (h *TaskHandler) bindAndValidateCreateRequest(c *gin.Context) (*CreateTaskRequest, bool) {
+	var req CreateTaskRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		MapErrorToProblemDetails(c, entity.ErrMissingRequiredFields)
+		return nil, false
+	}
+
+	if err := entity.ValidateName(req.Name); err != nil {
+		MapErrorToProblemDetails(c, err)
+		return nil, false
+	}
+
+	return &req, true
+}
+
+// parseCreateInput parsea el request y crea el input para el use case, validando subtareas
+func (h *TaskHandler) parseCreateInput(c *gin.Context, req *CreateTaskRequest) (taskUsecase.CreateTaskInput, bool) {
 	input := taskUsecase.CreateTaskInput{
 		Name:         req.Name,
 		CreatedBy:    req.CreatedBy,
 		SubtaskNames: make([]string, 0, len(req.Subtasks)),
 	}
 
-	// Validar y procesar subtareas
 	for _, stReq := range req.Subtasks {
 		if err := entity.ValidateName(stReq.Name); err != nil {
 			MapErrorToProblemDetails(c, err)
-			return
+			return taskUsecase.CreateTaskInput{}, false
 		}
 		input.SubtaskNames = append(input.SubtaskNames, stReq.Name)
 	}
 
-	// Ejecutar use case
-	output, err := h.createUseCase.Execute(c.Request.Context(), input)
+	return input, true
+}
+
+// applyInitialState aplica el estado inicial de la tarea si se proporcionó uno diferente a PENDING
+func (h *TaskHandler) applyInitialState(c *gin.Context, output *taskUsecase.CreateTaskOutput, initialState *entity.State, updatedBy string) bool {
+	if initialState == nil || *initialState == entity.StatePending {
+		return true
+	}
+
+	updateInput := taskUsecase.UpdateTaskInput{
+		ID:        output.Task.ID,
+		State:     initialState,
+		UpdatedBy: updatedBy,
+	}
+
+	updateOutput, err := h.updateUseCase.Execute(c.Request.Context(), updateInput)
 	if err != nil {
-		c.Error(err).SetType(gin.ErrorTypePrivate) // Log error for debugging
 		MapErrorToProblemDetails(c, err)
-		return
+		return false
 	}
 
-	// Actualizar estado de la tarea si se proporcionó uno diferente a PENDING
-	if initialState != nil && *initialState != entity.StatePending {
-		updateInput := taskUsecase.UpdateTaskInput{
-			ID:        output.Task.ID,
-			State:     initialState,
-			UpdatedBy: req.CreatedBy,
-		}
-		updateOutput, err := h.updateUseCase.Execute(c.Request.Context(), updateInput)
-		if err != nil {
-			MapErrorToProblemDetails(c, err)
-			return
-		}
-		output.Task = updateOutput.Task
+	output.Task = updateOutput.Task
+	return true
+}
+
+// applyInitialSubtaskStates aplica los estados iniciales de las subtareas si se proporcionaron
+func (h *TaskHandler) applyInitialSubtaskStates(c *gin.Context, output *taskUsecase.CreateTaskOutput, reqSubtasks []CreateSubtaskRequest, updatedBy string) bool {
+	if len(reqSubtasks) == 0 || len(output.Task.Subtasks) != len(reqSubtasks) {
+		return true
 	}
 
-	// Actualizar estados de subtareas si se proporcionaron
-	if len(req.Subtasks) > 0 && len(output.Task.Subtasks) == len(req.Subtasks) {
-		subtaskUpdates := make([]taskUsecase.UpdateSubtaskItemInput, 0, len(req.Subtasks))
-		for i, stReq := range req.Subtasks {
-			if stReq.State != nil && *stReq.State != "PENDING" {
-				parsedState, err := ParseState(*stReq.State)
-				if err != nil {
-					MapErrorToProblemDetails(c, err)
-					return
-				}
-				subtaskID := output.Task.Subtasks[i].ID
-				subtaskUpdates = append(subtaskUpdates, taskUsecase.UpdateSubtaskItemInput{
-					ID:    &subtaskID,
-					State: &parsedState,
-				})
-			}
+	subtaskUpdates := make([]taskUsecase.UpdateSubtaskItemInput, 0, len(reqSubtasks))
+	for i, stReq := range reqSubtasks {
+		if stReq.State == nil || *stReq.State == "PENDING" {
+			continue
 		}
 
-		if len(subtaskUpdates) > 0 {
-			updateInput := taskUsecase.UpdateTaskInput{
-				ID:        output.Task.ID,
-				UpdatedBy: req.CreatedBy,
-				Subtasks:  subtaskUpdates,
-			}
-			updateOutput, err := h.updateUseCase.Execute(c.Request.Context(), updateInput)
-			if err != nil {
-				MapErrorToProblemDetails(c, err)
-				return
-			}
-			output.Task = updateOutput.Task
+		parsedState, ok := parseStateOrError(c, stReq.State)
+		if !ok {
+			return false
 		}
+
+		subtaskID := output.Task.Subtasks[i].ID
+		subtaskUpdates = append(subtaskUpdates, taskUsecase.UpdateSubtaskItemInput{
+			ID:    &subtaskID,
+			State: parsedState,
+		})
 	}
 
-	c.JSON(http.StatusCreated, ToTaskResponse(output.Task))
+	if len(subtaskUpdates) == 0 {
+		return true
+	}
+
+	updateInput := taskUsecase.UpdateTaskInput{
+		ID:        output.Task.ID,
+		UpdatedBy: updatedBy,
+		Subtasks:  subtaskUpdates,
+	}
+
+	updateOutput, err := h.updateUseCase.Execute(c.Request.Context(), updateInput)
+	if err != nil {
+		MapErrorToProblemDetails(c, err)
+		return false
+	}
+
+	output.Task = updateOutput.Task
+	return true
 }
 
 // Update maneja PUT /Automatizacion
@@ -164,9 +199,8 @@ func (h *TaskHandler) Update(c *gin.Context) {
 	}
 
 	// Parsear UUID
-	taskID, err := ParseUUID(req.ID)
-	if err != nil {
-		MapErrorToProblemDetails(c, entity.ErrTaskNotFound)
+	taskID, ok := parseUUIDOrError(c, req.ID, entity.ErrTaskNotFound)
+	if !ok {
 		return
 	}
 
@@ -179,24 +213,18 @@ func (h *TaskHandler) Update(c *gin.Context) {
 	}
 
 	// Parsear estado si se proporciona
-	var state *entity.State
-	if req.State != nil {
-		parsedState, err := ParseState(*req.State)
-		if err != nil {
-			MapErrorToProblemDetails(c, err)
-			return
-		}
-		state = &parsedState
+	state, ok := parseStateOrError(c, req.State)
+	if !ok {
+		return
 	}
 
 	// Convertir subtareas del request
 	subtaskInputs := make([]taskUsecase.UpdateSubtaskItemInput, 0, len(req.Subtasks))
-	for _, stReq := range req.Subtasks {
+		for _, stReq := range req.Subtasks {
 		var stID *uuid.UUID
 		if stReq.ID != nil {
-			parsedID, err := ParseUUID(*stReq.ID)
-			if err != nil {
-				MapErrorToProblemDetails(c, entity.ErrSubtaskNotFound)
+			parsedID, ok := parseUUIDOrError(c, *stReq.ID, entity.ErrSubtaskNotFound)
+			if !ok {
 				return
 			}
 			stID = &parsedID
@@ -216,14 +244,9 @@ func (h *TaskHandler) Update(c *gin.Context) {
 			}
 		}
 
-		var stState *entity.State
-		if stReq.State != nil {
-			parsedState, err := ParseState(*stReq.State)
-			if err != nil {
-				MapErrorToProblemDetails(c, err)
-				return
-			}
-			stState = &parsedState
+		stState, ok := parseStateOrError(c, stReq.State)
+		if !ok {
+			return
 		}
 
 		subtaskInputs = append(subtaskInputs, taskUsecase.UpdateSubtaskItemInput{
@@ -255,9 +278,8 @@ func (h *TaskHandler) Update(c *gin.Context) {
 // Get maneja GET /Automatizacion/{uuid}
 func (h *TaskHandler) Get(c *gin.Context) {
 	uuidStr := c.Param("uuid")
-	taskID, err := ParseUUID(uuidStr)
-	if err != nil {
-		MapErrorToProblemDetails(c, entity.ErrTaskNotFound)
+	taskID, ok := parseUUIDOrError(c, uuidStr, entity.ErrTaskNotFound)
+	if !ok {
 		return
 	}
 
@@ -279,12 +301,12 @@ func (h *TaskHandler) List(c *gin.Context) {
 	// Parsear query parameters
 	var state *entity.State
 	if stateStr := c.Query("state"); stateStr != "" {
-		parsedState, err := ParseState(stateStr)
-		if err != nil {
-			MapErrorToProblemDetails(c, err)
+		statePtr := &stateStr
+		parsedState, ok := parseStateOrError(c, statePtr)
+		if !ok {
 			return
 		}
-		state = &parsedState
+		state = parsedState
 	}
 
 	var name *string

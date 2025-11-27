@@ -3,7 +3,6 @@ package http
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -20,6 +19,8 @@ type ProblemDetails struct {
 }
 
 // MapErrorToProblemDetails mapea errores de dominio a RFC 7807 Problem Details
+// Usa errors.Is() para detectar errores envueltos, eliminando la necesidad de
+// lógica frágil basada en strings.Contains()
 func MapErrorToProblemDetails(c *gin.Context, err error) {
 	var pd ProblemDetails
 	pd.Instance = c.Request.URL.Path
@@ -74,49 +75,13 @@ func MapErrorToProblemDetails(c *gin.Context, err error) {
 		pd.Detail = "An unexpected database error occurred. Please try again later."
 
 	default:
-		// Verificar si el error contiene alguna referencia a errores conocidos
-		errStr := err.Error()
-		if strings.Contains(errStr, entity.ErrInvalidName.Error()) ||
-			strings.Contains(errStr, entity.ErrInvalidStateTransition.Error()) ||
-			strings.Contains(errStr, entity.ErrInconsistentParentChildState.Error()) ||
-			strings.Contains(errStr, entity.ErrMissingRequiredFields.Error()) ||
-			strings.Contains(errStr, entity.ErrTaskNotFound.Error()) ||
-			strings.Contains(errStr, entity.ErrSubtaskNotFound.Error()) {
-			// Intentar mapear basándose en el contenido del mensaje
-			if strings.Contains(errStr, "name") && strings.Contains(errStr, "invalid") {
-				pd.Type = "https://api.grupoapi.com/problems/invalid-name"
-				pd.Title = "Invalid Task Name"
-				pd.Status = http.StatusBadRequest
-			} else if strings.Contains(errStr, "state transition") {
-				pd.Type = "https://api.grupoapi.com/problems/invalid-state-transition"
-				pd.Title = "Invalid State Transition"
-				pd.Status = http.StatusBadRequest
-			} else if strings.Contains(errStr, "not found") {
-				if strings.Contains(errStr, "task") {
-					pd.Type = "https://api.grupoapi.com/problems/task-not-found"
-					pd.Title = "Task Not Found"
-					pd.Status = http.StatusNotFound
-				} else if strings.Contains(errStr, "subtask") {
-					pd.Type = "https://api.grupoapi.com/problems/subtask-not-found"
-					pd.Title = "Subtask Not Found"
-					pd.Status = http.StatusNotFound
-				} else {
-					pd.Type = "https://api.grupoapi.com/problems/internal-error"
-					pd.Title = "Internal Server Error"
-					pd.Status = http.StatusInternalServerError
-				}
-			} else {
-				pd.Type = "https://api.grupoapi.com/problems/internal-error"
-				pd.Title = "Internal Server Error"
-				pd.Status = http.StatusInternalServerError
-			}
-			pd.Detail = errStr
-		} else {
-			pd.Type = "https://api.grupoapi.com/problems/internal-error"
-			pd.Title = "Internal Server Error"
-			pd.Status = http.StatusInternalServerError
-			pd.Detail = "An unexpected error occurred. Please contact support if the problem persists."
-		}
+		// Error desconocido: devolver error genérico
+		// errors.Is() ya maneja el unwrapping automáticamente, por lo que
+		// si llegamos aquí, el error no es uno de los errores conocidos del dominio
+		pd.Type = "https://api.grupoapi.com/problems/internal-error"
+		pd.Title = "Internal Server Error"
+		pd.Status = http.StatusInternalServerError
+		pd.Detail = "An unexpected error occurred. Please contact support if the problem persists."
 	}
 
 	c.JSON(pd.Status, pd)
