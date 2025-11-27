@@ -87,6 +87,16 @@ make docker-up
 curl http://localhost:8080/health
 ```
 
+## Flujo de Trabajo
+
+Este proyecto sigue un flujo de trabajo Git Flow con las ramas `main` (producción) y `develop` (desarrollo).
+
+- **Features y mejoras**: Crear rama desde `develop` → PR a `develop` (squash merge)
+- **Bugfixes críticos**: Crear rama desde `main` → PR a `main` (merge normal)
+- **Releases**: Merge de `develop` a `main` cuando se complete un Milestone
+
+Ver [`README_DEVELOP.md`](README_DEVELOP.md) para información detallada sobre el flujo de trabajo.
+
 ## Desarrollo
 
 ### Compilar y ejecutar localmente
