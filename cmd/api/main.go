@@ -66,6 +66,7 @@ func main() {
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
+		//nolint:gocritic // log.Fatalf is intentional here for critical shutdown error
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 

@@ -60,9 +60,11 @@ lint: ## Ejecutar linter
 
 fmt: ## Formatear código
 	gofumpt -l -w .
+	goimports -w -local github.com/grupoapi/proces-log .
 
 fmt-check: ## Verificar formato sin modificar
 	gofumpt -l .
+	goimports -l -local github.com/grupoapi/proces-log .
 
 clean: ## Limpiar archivos generados
 	rm -rf bin/

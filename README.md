@@ -57,24 +57,28 @@ grupoapi-proces-log/
 ## Configuración Rápida
 
 1. **Clonar repositorio**
+
 ```bash
 git clone <repository-url>
 cd grupoapi-proces-log
 ```
 
 2. **Configurar variables de entorno**
+
 ```bash
 cp .env.example .env
 # Editar .env con tus configuraciones
 ```
 
 3. **Levantar servicios con Docker Compose**
+
 ```bash
 make docker-up
 # o manualmente: docker-compose -f deployments/docker/docker-compose.yml up -d
 ```
 
 4. **Verificar salud del sistema**
+
 ```bash
 curl http://localhost:8080/health
 ```
@@ -119,22 +123,36 @@ make migrate-create NAME=create_users_table
 # Formatear código
 make fmt
 
+# Verificar formato sin modificar
+make fmt-check
+
 # Ejecutar linter
 make lint
 ```
 
+**Herramientas instaladas:**
+
+- `golangci-lint` v1.64+ - Linter integral con 25+ linters habilitados
+- `gofumpt` v0.9+ - Formateador estricto
+- `goimports` - Gestor de imports
+
+Ver documentación completa en [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)
+
 ## API Endpoints
 
 ### Health Check
+
 - `GET /health` - Verificar estado del servicio y conexión a BD
 
 ### Automatizaciones (Tasks)
+
 - `POST /Automatizacion` - Crear nueva tarea
 - `PUT /Automatizacion` - Actualizar tarea (modificar, añadir/eliminar subtareas)
 - `GET /Automatizacion/{uuid}` - Obtener tarea por ID
 - `GET /AutomatizacionListado` - Listar tareas con filtros y paginación
 
 ### Subtareas
+
 - `PUT /Subtask/{uuid}` - Actualizar subtarea individual
 - `DELETE /Subtask/{uuid}` - Eliminar subtarea (soft delete)
 
@@ -225,6 +243,7 @@ Las tareas eliminadas (soft delete) se borran permanentemente después de 30 dí
 ## CI/CD
 
 El proyecto incluye GitHub Actions para:
+
 - Ejecutar tests automáticamente
 - Compilar binarios
 - Construir imágenes Docker

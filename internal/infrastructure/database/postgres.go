@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/grupoapi/proces-log/internal/infrastructure/config"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/grupoapi/proces-log/internal/infrastructure/config"
 )
 
 // NewPostgresPool crea y configura un pool de conexiones a PostgreSQL

@@ -77,7 +77,7 @@ func (sm *StateMachine) ValidateSubtaskStateTransition(task *entity.Task, subtas
 	// Si la tarea padre está en estado final, la subtarea solo puede heredar ese estado
 	if task.State.IsFinal() {
 		if newState != task.State {
-			return fmt.Errorf("%w: subtask cannot transition when parent task is in final state %s", 
+			return fmt.Errorf("%w: subtask cannot transition when parent task is in final state %s",
 				entity.ErrInconsistentParentChildState, task.State)
 		}
 		// Validar transición básica solo después de verificar consistencia con padre
@@ -86,13 +86,13 @@ func (sm *StateMachine) ValidateSubtaskStateTransition(task *entity.Task, subtas
 
 	// Una subtarea no puede estar en IN_PROGRESS si el padre está PENDING
 	if task.State == entity.StatePending && newState == entity.StateInProgress {
-		return fmt.Errorf("%w: subtask cannot have state IN_PROGRESS when parent is PENDING", 
+		return fmt.Errorf("%w: subtask cannot have state IN_PROGRESS when parent is PENDING",
 			entity.ErrInconsistentParentChildState)
 	}
 
 	// Una subtarea no puede alcanzar un estado final si el padre no está en estado final
 	if newState.IsFinal() && !task.State.IsFinal() {
-		return fmt.Errorf("%w: subtask cannot reach final state %s when parent is %s", 
+		return fmt.Errorf("%w: subtask cannot reach final state %s when parent is %s",
 			entity.ErrInconsistentParentChildState, newState, task.State)
 	}
 

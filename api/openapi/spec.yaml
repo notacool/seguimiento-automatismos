@@ -3,9 +3,9 @@ info:
   title: API-LOG-AUTOS - Gestión de Estados de Automatizaciones
   description: |
     API REST para centralizar logs y estados de procesos automatizados de múltiples equipos.
-    
+
     Implementa Clean Architecture siguiendo principios API-First, TDD, SOLID, KISS, YAGNI y DRY.
-    
+
     ## Características
     - Gestión completa de tareas y subtareas
     - Máquina de estados con validación de transiciones
@@ -16,7 +16,7 @@ info:
   version: 1.0.0
   contact:
     name: Grupo API
-    
+
 servers:
   - url: http://localhost:8080
     description: Desarrollo local
@@ -40,18 +40,18 @@ paths:
       description: Retorna el estado del servicio y la conexión a base de datos
       operationId: healthCheck
       responses:
-        '200':
+        "200":
           description: Servicio saludable
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthResponse'
-        '503':
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
           description: Servicio no disponible
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthResponse'
+                $ref: "#/components/schemas/HealthResponse"
 
   /Automatizacion:
     post:
@@ -65,7 +65,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateTaskRequest'
+              $ref: "#/components/schemas/CreateTaskRequest"
             examples:
               simple:
                 summary: Tarea simple
@@ -87,19 +87,19 @@ paths:
                     - name: "Comprimir archivo"
                     - name: "Subir a S3"
       responses:
-        '201':
+        "201":
           description: Tarea creada exitosamente
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Task'
-        '400':
+                $ref: "#/components/schemas/Task"
+        "400":
           description: Request inválido
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
-    
+                $ref: "#/components/schemas/ProblemDetails"
+
     put:
       tags:
         - Automatizaciones
@@ -110,7 +110,7 @@ paths:
         - Cambiar estado de subtareas existentes
         - Añadir nuevas subtareas
         - Eliminar subtareas
-        
+
         Todas las operaciones son transaccionales.
       operationId: updateAutomatizacion
       requestBody:
@@ -118,7 +118,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateTaskRequest'
+              $ref: "#/components/schemas/UpdateTaskRequest"
             examples:
               cambiar_estado:
                 summary: Cambiar estado a IN_PROGRESS
@@ -137,24 +137,24 @@ paths:
                     - name: "Nueva subtarea"
                       state: "PENDING"
       responses:
-        '200':
+        "200":
           description: Tarea actualizada exitosamente
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Task'
-        '400':
+                $ref: "#/components/schemas/Task"
+        "400":
           description: Request inválido o transición de estado no permitida
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
-        '404':
+                $ref: "#/components/schemas/ProblemDetails"
+        "404":
           description: Tarea no encontrada
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
+                $ref: "#/components/schemas/ProblemDetails"
 
   /Automatizacion/{uuid}:
     get:
@@ -173,18 +173,18 @@ paths:
             format: uuid
           example: "550e8400-e29b-41d4-a716-446655440000"
       responses:
-        '200':
+        "200":
           description: Tarea encontrada
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Task'
-        '404':
+                $ref: "#/components/schemas/Task"
+        "404":
           description: Tarea no encontrada o eliminada
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
+                $ref: "#/components/schemas/ProblemDetails"
 
   /AutomatizacionListado:
     get:
@@ -201,7 +201,7 @@ paths:
           in: query
           description: Filtrar por estado
           schema:
-            $ref: '#/components/schemas/State'
+            $ref: "#/components/schemas/State"
           example: "IN_PROGRESS"
         - name: name
           in: query
@@ -226,18 +226,18 @@ paths:
             default: 20
           example: 20
       responses:
-        '200':
+        "200":
           description: Lista de tareas
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TaskListResponse'
-        '400':
+                $ref: "#/components/schemas/TaskListResponse"
+        "400":
           description: Parámetros inválidos
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
+                $ref: "#/components/schemas/ProblemDetails"
 
   /Subtask/{uuid}:
     put:
@@ -265,30 +265,30 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateSubtaskRequest'
+              $ref: "#/components/schemas/UpdateSubtaskRequest"
             example:
               state: "COMPLETED"
               updated_by: "Equipo DevOps"
       responses:
-        '200':
+        "200":
           description: Subtarea actualizada exitosamente
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Subtask'
-        '400':
+                $ref: "#/components/schemas/Subtask"
+        "400":
           description: Request inválido o transición no permitida
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
-        '404':
+                $ref: "#/components/schemas/ProblemDetails"
+        "404":
           description: Subtarea no encontrada
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
-    
+                $ref: "#/components/schemas/ProblemDetails"
+
     delete:
       tags:
         - Subtareas
@@ -320,14 +320,14 @@ paths:
               example:
                 deleted_by: "Equipo DevOps"
       responses:
-        '204':
+        "204":
           description: Subtarea eliminada exitosamente
-        '404':
+        "404":
           description: Subtarea no encontrada
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
+                $ref: "#/components/schemas/ProblemDetails"
 
 components:
   schemas:
@@ -390,14 +390,14 @@ components:
           type: string
           minLength: 1
           maxLength: 256
-          pattern: '^[a-zA-Z0-9 _-]+$'
+          pattern: "^[a-zA-Z0-9 _-]+$"
           description: Nombre de la tarea (alfanumérico con espacios, guiones y guiones bajos)
         state:
-          $ref: '#/components/schemas/State'
+          $ref: "#/components/schemas/State"
         subtasks:
           type: array
           items:
-            $ref: '#/components/schemas/Subtask'
+            $ref: "#/components/schemas/Subtask"
           description: Lista de subtareas
         created_by:
           type: string
@@ -471,10 +471,10 @@ components:
           type: string
           minLength: 1
           maxLength: 256
-          pattern: '^[a-zA-Z0-9 _-]+$'
+          pattern: "^[a-zA-Z0-9 _-]+$"
           description: Nombre de la subtarea
         state:
-          $ref: '#/components/schemas/State'
+          $ref: "#/components/schemas/State"
         start_date:
           type: string
           format: date-time
@@ -509,10 +509,10 @@ components:
           type: string
           minLength: 1
           maxLength: 256
-          pattern: '^[a-zA-Z0-9 _-]+$'
+          pattern: "^[a-zA-Z0-9 _-]+$"
           description: Nombre de la tarea
         state:
-          $ref: '#/components/schemas/State'
+          $ref: "#/components/schemas/State"
           default: PENDING
         created_by:
           type: string
@@ -529,9 +529,9 @@ components:
                 type: string
                 minLength: 1
                 maxLength: 256
-                pattern: '^[a-zA-Z0-9 _-]+$'
+                pattern: "^[a-zA-Z0-9 _-]+$"
               state:
-                $ref: '#/components/schemas/State'
+                $ref: "#/components/schemas/State"
                 default: PENDING
           description: Lista de subtareas a crear
 
@@ -549,10 +549,10 @@ components:
           type: string
           minLength: 1
           maxLength: 256
-          pattern: '^[a-zA-Z0-9 _-]+$'
+          pattern: "^[a-zA-Z0-9 _-]+$"
           description: Nuevo nombre (opcional)
         state:
-          $ref: '#/components/schemas/State'
+          $ref: "#/components/schemas/State"
           description: Nuevo estado (opcional)
         updated_by:
           type: string
@@ -571,10 +571,10 @@ components:
                 type: string
                 minLength: 1
                 maxLength: 256
-                pattern: '^[a-zA-Z0-9 _-]+$'
+                pattern: "^[a-zA-Z0-9 _-]+$"
                 description: Nombre (requerido si es nueva subtarea)
               state:
-                $ref: '#/components/schemas/State'
+                $ref: "#/components/schemas/State"
                 description: Nuevo estado
           description: Lista de subtareas (actualizar existentes o añadir nuevas)
 
@@ -587,10 +587,10 @@ components:
           type: string
           minLength: 1
           maxLength: 256
-          pattern: '^[a-zA-Z0-9 _-]+$'
+          pattern: "^[a-zA-Z0-9 _-]+$"
           description: Nuevo nombre (opcional)
         state:
-          $ref: '#/components/schemas/State'
+          $ref: "#/components/schemas/State"
           description: Nuevo estado (opcional)
         updated_by:
           type: string
@@ -606,7 +606,7 @@ components:
         tasks:
           type: array
           items:
-            $ref: '#/components/schemas/Task'
+            $ref: "#/components/schemas/Task"
           description: Lista de tareas
         pagination:
           type: object

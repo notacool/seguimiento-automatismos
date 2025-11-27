@@ -3,9 +3,10 @@ package service
 import (
 	"testing"
 
-	"github.com/grupoapi/proces-log/internal/domain/entity"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/grupoapi/proces-log/internal/domain/entity"
 )
 
 func TestStateMachine_CanTransition(t *testing.T) {

@@ -11,9 +11,9 @@ import (
 
 func TestNewSubtask(t *testing.T) {
 	tests := []struct {
-		name      string
+		name        string
 		subtaskName string
-		wantErr   bool
+		wantErr     bool
 		errContains string
 	}{
 		{
