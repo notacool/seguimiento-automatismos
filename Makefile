@@ -1,9 +1,13 @@
-.PHONY: help build test test-coverage run docker-up docker-down docker-logs docker-build migrate-up migrate-down migrate-create lint fmt clean deps generate-server generate-client generate-all
+.PHONY: help build test test-unit test-integration test-e2e test-all test-coverage run docker-up docker-down docker-logs docker-build migrate-up migrate-down migrate-create lint fmt fmt-check clean deps
 
 help: ## Mostrar ayuda
 	@echo "Comandos disponibles:"
 	@echo "  make build             - Compilar aplicación"
-	@echo "  make test              - Ejecutar tests"
+	@echo "  make test              - Ejecutar tests unitarios"
+	@echo "  make test-unit         - Ejecutar solo tests unitarios"
+	@echo "  make test-integration  - Ejecutar tests de integración"
+	@echo "  make test-e2e          - Ejecutar tests End-to-End"
+	@echo "  make test-all          - Ejecutar todos los tests"
 	@echo "  make test-coverage     - Ver cobertura de tests"
 	@echo "  make run               - Ejecutar aplicación localmente"
 	@echo "  make docker-up         - Levantar servicios con Docker Compose"
@@ -24,12 +28,28 @@ help: ## Mostrar ayuda
 build: ## Compilar aplicación
 	go build -o bin/api.exe ./cmd/api
 
-test: ## Ejecutar tests
+test: test-unit ## Ejecutar tests unitarios (alias de test-unit)
+
+test-unit: ## Ejecutar solo tests unitarios (excluyendo integración y E2E)
+	go test -v -race -short ./internal/... ./test/helpers/...
+
+test-integration: ## Ejecutar tests de integración con PostgreSQL
+	go test -v -race -tags=integration ./test/integration/...
+
+test-e2e: ## Ejecutar tests End-to-End
+	go test -v -race ./test/e2e/...
+
+test-all: ## Ejecutar todos los tests (unitarios, integración y E2E)
 	go test -v -race ./...
 
 test-coverage: ## Ver cobertura de tests
 	go test -v -race -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out
+
+test-coverage-html: ## Generar reporte HTML de cobertura
+	go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Reporte de cobertura generado en coverage.html"
 
 run: ## Ejecutar aplicación localmente
 	go run ./cmd/api
