@@ -117,30 +117,19 @@ func (uc *UpdateSubtaskUseCase) validateInput(input UpdateSubtaskInput) error {
 }
 
 // findParentTask encuentra la tarea padre de una subtarea
-// Este es un helper que busca todas las tareas hasta encontrar la que contiene la subtarea
+// Utiliza la foreign key task_id en la tabla subtasks para una búsqueda O(1)
 func (uc *UpdateSubtaskUseCase) findParentTask(ctx context.Context, subtaskID uuid.UUID) (*entity.Task, error) {
-	// Estrategia: buscar en todas las tareas no eliminadas
-	// En un sistema real, podríamos optimizar esto añadiendo task_id a la tabla subtasks
-	// o creando un índice específico, pero por ahora usamos esta aproximación
-	filters := repository.TaskFilters{
-		Page:           1,
-		Limit:          1000, // Límite razonable
-		Offset:         0,
-		IncludeDeleted: false,
-	}
-
-	result, err := uc.taskRepo.FindAll(ctx, filters)
+	// Obtener el task_id directamente de la subtarea (O(1))
+	taskID, err := uc.subtaskRepo.FindParentTaskID(ctx, subtaskID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to search parent task: %w", err)
+		return nil, fmt.Errorf("failed to find parent task ID: %w", err)
 	}
 
-	for _, task := range result.Tasks {
-		for _, subtask := range task.Subtasks {
-			if subtask.ID == subtaskID {
-				return task, nil
-			}
-		}
+	// Cargar la tarea completa
+	task, err := uc.taskRepo.FindByID(ctx, taskID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load parent task: %w", err)
 	}
 
-	return nil, fmt.Errorf("%w: parent task not found for subtask", entity.ErrTaskNotFound)
+	return task, nil
 }

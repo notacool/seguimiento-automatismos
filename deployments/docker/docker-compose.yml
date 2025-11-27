@@ -1,6 +1,24 @@
 version: "3.8"
 
 services:
+  migrate:
+    image: docker.io/migrate/migrate:latest
+    container_name: proceslog-migrate
+    command:
+      - "-path"
+      - "/migrations"
+      - "-database"
+      - "postgres://postgres:postgres@db:5432/proceslog?sslmode=disable"
+      - "up"
+    volumes:
+      - ../../internal/adapter/repository/postgres/migrations:/migrations
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - proceslog-network
+    restart: "no"
+
   api:
     build:
       context: ../..
@@ -22,6 +40,8 @@ services:
       - DATABASE_MAX_CONN_LIFETIME=5m
       - DATABASE_MAX_CONN_IDLE_TIME=1m
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
     networks:
@@ -43,7 +63,7 @@ services:
     restart: unless-stopped
 
   db:
-    image: postgres:16-alpine
+    image: docker.io/library/postgres:16-alpine
     container_name: proceslog-db
     environment:
       - POSTGRES_USER=postgres
@@ -57,10 +77,28 @@ services:
     networks:
       - proceslog-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "pg_isready -U postgres -d proceslog"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  simulator:
+    build:
+      context: ./simulator
+      dockerfile: Dockerfile
+    container_name: proceslog-simulator
+    environment:
+      - API_BASE_URL=http://api:8080
+      - SIMULATOR_INTERVAL=30
+      - SIMULATOR_NAME_PREFIX=Sim-Auto
+      - SIMULATOR_CREATED_BY=simulator-bot
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - proceslog-network
     restart: unless-stopped
 
 volumes:

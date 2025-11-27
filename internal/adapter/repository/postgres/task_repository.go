@@ -56,7 +56,7 @@ func (r *TaskRepository) Create(ctx context.Context, task *entity.Task) error {
 	// Insert subtasks
 	if len(task.Subtasks) > 0 {
 		querySubtask := `
-			INSERT INTO subtasks (id, name, state, start_date, end_date, created_at, updated_at)
+			INSERT INTO subtasks (id, task_id, name, state, start_date, end_date, created_at, updated_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		`
 
@@ -138,7 +138,7 @@ func (r *TaskRepository) Update(ctx context.Context, task *entity.Task) error {
 			} else {
 				// Insert new subtask
 				_, err = tx.Exec(ctx, `
-					INSERT INTO subtasks (id, name, state, start_date, end_date, created_at, updated_at)
+					INSERT INTO subtasks (id, task_id, name, state, start_date, end_date, created_at, updated_at)
 					VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 				`, subtask.ID, task.ID, subtask.Name, subtask.State.String(), subtask.StartDate, subtask.EndDate, subtask.CreatedAt, subtask.UpdatedAt)
 			}
@@ -375,7 +375,7 @@ func (r *TaskRepository) loadSubtasks(ctx context.Context, taskID uuid.UUID) ([]
 
 		err := rows.Scan(
 			&subtask.ID,
-			
+
 			&subtask.Name,
 			&state,
 			&subtask.StartDate,

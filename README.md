@@ -33,7 +33,7 @@ grupoapi-proces-log/
 
 - **Go 1.21+** con framework **Gin**
 - **PostgreSQL 16** con extensión **pg_cron**
-- **Docker & Docker Compose**
+- **Docker & Docker Compose** (o Podman & Podman Compose)
 - **Python CLI** (Click) con binarios para Windows/Linux
 - **OpenAPI 3.0** para especificación API-First
 - **golang-migrate** para migraciones de base de datos
@@ -68,13 +68,17 @@ cd grupoapi-proces-log
 ```bash
 cp .env.example .env
 # Editar .env con tus configuraciones
+# Importante: Configurar CONTAINER_RUNTIME=podman si usas Podman
+# Ver docs/CONFIG_ENV.md para más detalles
 ```
 
-3. **Levantar servicios con Docker Compose**
+3. **Levantar servicios con Docker/Podman Compose**
 
 ```bash
 make docker-up
-# o manualmente: docker-compose -f deployments/docker/docker-compose.yml up -d
+# El Makefile detecta automáticamente Docker o Podman
+# O configurar en .env: CONTAINER_RUNTIME=podman|docker|auto
+# Ver: make detect-container-runtime
 ```
 
 4. **Verificar salud del sistema**
@@ -219,6 +223,22 @@ make test-coverage
 
 # Tests de un paquete específico
 go test -v ./internal/domain/entity/...
+
+# Tests End-to-End (requiere Docker/Podman)
+# Ver docs/INSTALL_PODMAN.md para instalación
+make test-e2e
+```
+
+### Requisitos para Tests E2E
+
+Los tests E2E requieren Docker o Podman. Para Arch Linux, se recomienda Podman:
+
+```bash
+# Instalación automática
+./scripts/setup-podman.sh
+
+# O ver documentación completa
+cat docs/INSTALL_PODMAN.md
 ```
 
 ## Gestión de Errores (RFC 7807)

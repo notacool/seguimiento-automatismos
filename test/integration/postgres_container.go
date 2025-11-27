@@ -20,6 +20,7 @@ type PostgresContainer struct {
 }
 
 // SetupPostgresContainer inicia un contenedor PostgreSQL para tests.
+// Soporta tanto Docker como Podman automáticamente (testcontainers-go detecta automáticamente).
 func SetupPostgresContainer(ctx context.Context, t *testing.T) *PostgresContainer {
 	t.Helper()
 

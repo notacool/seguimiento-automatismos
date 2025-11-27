@@ -20,6 +20,10 @@ type SubtaskRepository interface {
 	// Retorna entity.ErrSubtaskNotFound si no existe o está eliminada
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.Subtask, error)
 
+	// FindParentTaskID busca el UUID de la tarea padre de una subtarea
+	// Retorna entity.ErrSubtaskNotFound si la subtarea no existe o está eliminada
+	FindParentTaskID(ctx context.Context, subtaskID uuid.UUID) (uuid.UUID, error)
+
 	// FindByTaskID retorna todas las subtareas de una tarea (incluyendo eliminadas si se especifica)
 	FindByTaskID(ctx context.Context, taskID uuid.UUID, includeDeleted bool) ([]*entity.Subtask, error)
 

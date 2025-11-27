@@ -82,6 +82,26 @@ func (r *SubtaskRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity
 	return &subtask, nil
 }
 
+// FindParentTaskID busca el UUID de la tarea padre de una subtarea
+func (r *SubtaskRepository) FindParentTaskID(ctx context.Context, subtaskID uuid.UUID) (uuid.UUID, error) {
+	query := `
+		SELECT task_id
+		FROM subtasks
+		WHERE id = $1 AND deleted_at IS NULL
+	`
+
+	var taskID uuid.UUID
+	err := r.pool.QueryRow(ctx, query, subtaskID).Scan(&taskID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return uuid.Nil, entity.ErrSubtaskNotFound
+		}
+		return uuid.Nil, fmt.Errorf("failed to find parent task ID: %w", err)
+	}
+
+	return taskID, nil
+}
+
 // Update actualiza una subtarea existente
 func (r *SubtaskRepository) Update(ctx context.Context, subtask *entity.Subtask) error {
 	query := `
