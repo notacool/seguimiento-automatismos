@@ -11,9 +11,10 @@ import (
 // TaskFilters representa los filtros para listar tareas
 type TaskFilters struct {
 	State          *entity.State // Filtrar por estado (opcional)
-	NameContains   string        // Búsqueda parcial en nombre (case-insensitive)
+	Name           *string       // Búsqueda parcial en nombre (case-insensitive)
 	Page           int           // Número de página (1-indexed)
 	Limit          int           // Cantidad de resultados por página
+	Offset         int           // Offset calculado para paginación
 	IncludeDeleted bool          // Incluir tareas eliminadas (soft-deleted)
 }
 
