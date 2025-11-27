@@ -1,0 +1,63 @@
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "name": "Procesamiento de Facturas",
+    "state": "PENDING",
+    "created_by": "equipo-finanzas",
+    "updated_by": "equipo-finanzas",
+    "created_at": "2025-01-01T10:00:00Z",
+    "updated_at": "2025-01-01T10:00:00Z",
+    "subtasks": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440002",
+        "task_id": "550e8400-e29b-41d4-a716-446655440001",
+        "name": "Validar formato XML",
+        "state": "PENDING",
+        "created_by": "equipo-finanzas",
+        "created_at": "2025-01-01T10:00:00Z"
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440003",
+        "task_id": "550e8400-e29b-41d4-a716-446655440001",
+        "name": "Cargar a base de datos",
+        "state": "PENDING",
+        "created_by": "equipo-finanzas",
+        "created_at": "2025-01-01T10:00:00Z"
+      }
+    ]
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440010",
+    "name": "Sincronización de Inventario",
+    "state": "IN_PROGRESS",
+    "created_by": "equipo-logistica",
+    "updated_by": "equipo-logistica",
+    "created_at": "2025-01-01T09:00:00Z",
+    "updated_at": "2025-01-01T11:00:00Z",
+    "start_date": "2025-01-01T11:00:00Z",
+    "subtasks": []
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440020",
+    "name": "Generación de Reportes Mensuales",
+    "state": "COMPLETED",
+    "created_by": "equipo-reporting",
+    "updated_by": "equipo-reporting",
+    "created_at": "2024-12-31T08:00:00Z",
+    "updated_at": "2025-01-01T00:00:00Z",
+    "start_date": "2024-12-31T08:00:00Z",
+    "end_date": "2025-01-01T00:00:00Z",
+    "subtasks": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440021",
+        "task_id": "550e8400-e29b-41d4-a716-446655440020",
+        "name": "Extraer datos",
+        "state": "COMPLETED",
+        "created_by": "equipo-reporting",
+        "created_at": "2024-12-31T08:00:00Z",
+        "start_date": "2024-12-31T08:00:00Z",
+        "end_date": "2024-12-31T20:00:00Z"
+      }
+    ]
+  }
+]
