@@ -8,6 +8,10 @@ bin/
 dist/
 build/
 
+# Generated code from OpenAPI
+internal/adapter/handler/http/generated/
+generated/
+
 # Test binary, built with `go test -c`
 *.test
 

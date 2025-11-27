@@ -1,0 +1,19 @@
+{
+  "packageName": "automatizacion_client",
+  "projectName": "automatizacion-client",
+  "packageVersion": "1.0.0",
+  "hideGenerationTimestamp": true,
+  "generateSourceCodeOnly": false,
+  "library": "urllib3",
+  "packageUrl": "https://github.com/grupoapi/automatizacion-client-python",
+  "useOneOfDiscriminatorLookup": true,
+  "disallowAdditionalPropertiesIfNotPresent": false,
+  "enumClassPrefix": true,
+  "sortParamsByRequiredFlag": true,
+  "sortModelPropertiesByRequiredFlag": true,
+  "ensureUniqueParams": true,
+  "allowUnicodeIdentifiers": false,
+  "prependFormOrBodyParameters": true,
+  "modelPackage": "models",
+  "apiPackage": "api"
+}

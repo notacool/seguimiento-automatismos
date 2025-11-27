@@ -1,4 +1,4 @@
-.PHONY: help build test test-coverage run docker-up docker-down docker-logs docker-build migrate-up migrate-down migrate-create lint fmt clean deps
+.PHONY: help build test test-coverage run docker-up docker-down docker-logs docker-build migrate-up migrate-down migrate-create lint fmt clean deps generate-server generate-client generate-all
 
 help: ## Mostrar ayuda
 	@echo "Comandos disponibles:"
@@ -13,6 +13,9 @@ help: ## Mostrar ayuda
 	@echo "  make migrate-up        - Ejecutar migraciones"
 	@echo "  make migrate-down      - Revertir migraciones"
 	@echo "  make migrate-create    - Crear nueva migración (usar NAME=nombre)"
+	@echo "  make generate-server   - Generar código servidor Go desde OpenAPI"
+	@echo "  make generate-client   - Generar cliente Python desde OpenAPI"
+	@echo "  make generate-all      - Generar servidor Go y cliente Python"
 	@echo "  make lint              - Ejecutar linter"
 	@echo "  make fmt               - Formatear código"
 	@echo "  make clean             - Limpiar archivos generados"
@@ -53,10 +56,13 @@ migrate-create: ## Crear nueva migración (uso: make migrate-create NAME=create_
 	migrate create -ext sql -dir internal/adapter/repository/postgres/migrations -seq $(NAME)
 
 lint: ## Ejecutar linter
-	golangci-lint run
+	golangci-lint run ./...
 
 fmt: ## Formatear código
-	go fmt ./...
+	gofumpt -l -w .
+
+fmt-check: ## Verificar formato sin modificar
+	gofumpt -l .
 
 clean: ## Limpiar archivos generados
 	rm -rf bin/
@@ -65,6 +71,34 @@ clean: ## Limpiar archivos generados
 deps: ## Descargar dependencias
 	go mod download
 	go mod tidy
+
+generate-server: ## Generar código servidor Go desde OpenAPI spec
+	@echo "Generando código servidor Go con oapi-codegen..."
+	@mkdir -p internal/adapter/handler/http/generated
+	oapi-codegen -config api/oapi-codegen.yaml api/openapi/spec.yaml > internal/adapter/handler/http/generated/api.gen.go
+	@echo "✓ Código servidor generado en internal/adapter/handler/http/generated/api.gen.go"
+
+generate-client: ## Generar cliente Python desde OpenAPI spec
+	@echo "Generando cliente Python con openapi-generator..."
+	@echo "IMPORTANTE: Asegúrate de tener Docker instalado o instala openapi-generator-cli:"
+	@echo "  npm install @openapitools/openapi-generator-cli -g"
+	@echo "  o"
+	@echo "  pip install openapi-generator-cli"
+	@echo ""
+	@echo "Comando para generar cliente Python:"
+	@echo "  openapi-generator-cli generate -i api/openapi/spec.yaml -g python -o generated/python-client -c api/openapi-generator-config.json"
+	@echo ""
+	@echo "O con Docker:"
+	@echo "  docker run --rm -v $(PWD):/local openapitools/openapi-generator-cli generate \\"
+	@echo "    -i /local/api/openapi/spec.yaml \\"
+	@echo "    -g python \\"
+	@echo "    -o /local/generated/python-client \\"
+	@echo "    -c /local/api/openapi-generator-config.json"
+
+generate-all: generate-server ## Generar servidor Go y cliente Python
+	@echo ""
+	@echo "✓ Generación de código servidor completada"
+	@echo "ℹ Para generar el cliente Python, ejecuta: make generate-client"
 
 cli-deps: ## Instalar dependencias del CLI Python
 	cd scripts/cli && pip install -r requirements.txt

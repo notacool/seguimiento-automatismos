@@ -1,0 +1,36 @@
+# oapi-codegen configuration for Go server generation
+# https://github.com/oapi-codegen/oapi-codegen
+
+package: generated
+generate:
+  # Generate server interfaces (Gin)
+  gin-server: true
+  # Generate data models
+  models: true
+  # Generate request/response types
+  embedded-spec: true
+  # Generate parameter validation
+  strict-server: true
+  # Generate Chi router middleware (disabled, using Gin)
+  chi-server: false
+  # Generate client (disabled, not needed for server-side)
+  client: false
+
+output-options:
+  # Skip pruning unused models
+  skip-prune: false
+  # Use pointer types for optional fields
+  nullable-type: "*"
+  # Skip validation of OpenAPI spec
+  skip-validation: false
+  # Import mapping for custom types
+  import-mapping:
+    # Map UUID to google/uuid
+    "uuid": "github.com/google/uuid"
+
+# Type overrides for better Go types
+types:
+  # Use time.Time for date-time fields
+  date-time: time.Time
+  # Use UUID type instead of string
+  uuid: uuid.UUID

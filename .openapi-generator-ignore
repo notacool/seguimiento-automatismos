@@ -1,0 +1,24 @@
+# OpenAPI Generator Ignore File
+# This file tells openapi-generator which files to ignore during generation
+
+# Don't overwrite these files if they already exist
+README.md
+setup.py
+requirements.txt
+.gitignore
+
+# Test files - we'll write our own
+test/
+tests/
+
+# Git files
+.git/
+.gitignore
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Documentation that we maintain manually
+docs/README.md
