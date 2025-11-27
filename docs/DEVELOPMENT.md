@@ -7,9 +7,11 @@
 Este proyecto utiliza las siguientes herramientas para mantener la calidad del código:
 
 #### golangci-lint (v1.64.8)
+
 Linter integral que ejecuta múltiples linters en paralelo.
 
 **Instalación:**
+
 ```bash
 # Usando el instalador oficial
 curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -b $(go env GOPATH)/bin v1.62.2
@@ -19,6 +21,7 @@ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 ```
 
 **Uso:**
+
 ```bash
 # Ejecutar linter
 make lint
@@ -30,6 +33,7 @@ golangci-lint run ./...
 **Configuración:** Ver `.golangci.yml`
 
 **Linters habilitados:**
+
 - `errcheck` - Verifica errores no manejados
 - `gosimple` - Simplifica código
 - `govet` - Análisis estático de Go
@@ -58,18 +62,22 @@ golangci-lint run ./...
 - `whitespace` - Espacios en blanco
 
 **Linters deshabilitados:**
+
 - `exportloopref` - Deprecado desde Go 1.22
 - `godot` - Demasiado estricto para comentarios en español
 
 #### gofumpt (v0.9.2)
+
 Formateador de código Go más estricto que `gofmt`.
 
 **Instalación:**
+
 ```bash
 go install mvdan.cc/gofumpt@latest
 ```
 
 **Uso:**
+
 ```bash
 # Formatear código
 make fmt
@@ -82,14 +90,17 @@ gofumpt -l -w .
 ```
 
 #### goimports
+
 Gestiona imports automáticamente (agrupa, ordena, elimina no usados).
 
 **Instalación:**
+
 ```bash
 go install golang.org/x/tools/cmd/goimports@latest
 ```
 
 **Uso:**
+
 ```bash
 # Se ejecuta automáticamente con make fmt
 make fmt
@@ -119,6 +130,7 @@ make test-coverage
 ### Integración Continua
 
 GitHub Actions ejecuta automáticamente:
+
 - Verificación de formato (`gofumpt`)
 - Linting con `golangci-lint`
 - Tests con coverage
@@ -163,6 +175,7 @@ Verifica que no tengas el mismo linter en `enable` y `disable` en `.golangci.yml
 ### Error: "version mismatch"
 
 Asegúrate de que la versión en `.golangci.yml` coincida con la instalada:
+
 ```bash
 golangci-lint --version
 ```
@@ -170,6 +183,7 @@ golangci-lint --version
 ### Imports mal formateados
 
 Ejecuta:
+
 ```bash
 goimports -w -local github.com/grupoapi/proces-log .
 ```
