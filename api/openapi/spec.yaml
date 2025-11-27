@@ -1,0 +1,675 @@
+openapi: 3.0.3
+info:
+  title: API-LOG-AUTOS - Gestión de Estados de Automatizaciones
+  description: |
+    API REST para centralizar logs y estados de procesos automatizados de múltiples equipos.
+    
+    Implementa Clean Architecture siguiendo principios API-First, TDD, SOLID, KISS, YAGNI y DRY.
+    
+    ## Características
+    - Gestión completa de tareas y subtareas
+    - Máquina de estados con validación de transiciones
+    - Auditoría de cambios (created_by, updated_by)
+    - Soft delete con limpieza automática tras 30 días
+    - Filtrado y paginación
+    - Manejo de errores según RFC 7807
+  version: 1.0.0
+  contact:
+    name: Grupo API
+    
+servers:
+  - url: http://localhost:8080
+    description: Desarrollo local
+  - url: http://localhost:8080/api/v1
+    description: API v1
+
+tags:
+  - name: Health
+    description: Verificación de estado del servicio
+  - name: Automatizaciones
+    description: Gestión de tareas de automatización
+  - name: Subtareas
+    description: Gestión individual de subtareas
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Verificar estado del servicio
+      description: Retorna el estado del servicio y la conexión a base de datos
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Servicio saludable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Servicio no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /Automatizacion:
+    post:
+      tags:
+        - Automatizaciones
+      summary: Crear nueva automatización
+      description: Crea una nueva tarea con sus subtareas. Retorna el objeto completo con IDs generados.
+      operationId: createAutomatizacion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+            examples:
+              simple:
+                summary: Tarea simple
+                value:
+                  name: "Proceso Facturación"
+                  created_by: "Equipo Finanzas"
+                  subtasks:
+                    - name: "Validar datos"
+                    - name: "Generar PDF"
+                    - name: "Enviar email"
+              completo:
+                summary: Tarea con estado inicial
+                value:
+                  name: "Backup-BD-2025"
+                  state: "PENDING"
+                  created_by: "Equipo DevOps"
+                  subtasks:
+                    - name: "Dump PostgreSQL"
+                    - name: "Comprimir archivo"
+                    - name: "Subir a S3"
+      responses:
+        '201':
+          description: Tarea creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Request inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    
+    put:
+      tags:
+        - Automatizaciones
+      summary: Actualizar automatización
+      description: |
+        Actualiza una tarea existente. Permite:
+        - Modificar nombre y estado de la tarea
+        - Cambiar estado de subtareas existentes
+        - Añadir nuevas subtareas
+        - Eliminar subtareas
+        
+        Todas las operaciones son transaccionales.
+      operationId: updateAutomatizacion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+            examples:
+              cambiar_estado:
+                summary: Cambiar estado a IN_PROGRESS
+                value:
+                  id: "550e8400-e29b-41d4-a716-446655440000"
+                  state: "IN_PROGRESS"
+                  updated_by: "Equipo Finanzas"
+              añadir_subtarea:
+                summary: Añadir subtarea nueva
+                value:
+                  id: "550e8400-e29b-41d4-a716-446655440000"
+                  updated_by: "Equipo DevOps"
+                  subtasks:
+                    - id: "660e8400-e29b-41d4-a716-446655440001"
+                      state: "COMPLETED"
+                    - name: "Nueva subtarea"
+                      state: "PENDING"
+      responses:
+        '200':
+          description: Tarea actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Request inválido o transición de estado no permitida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Tarea no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /Automatizacion/{uuid}:
+    get:
+      tags:
+        - Automatizaciones
+      summary: Obtener automatización por ID
+      description: Retorna una tarea específica con todas sus subtareas. No retorna tareas eliminadas (soft-deleted).
+      operationId: getAutomatizacion
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          description: UUID de la tarea
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Tarea encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          description: Tarea no encontrada o eliminada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /AutomatizacionListado:
+    get:
+      tags:
+        - Automatizaciones
+      summary: Listar automatizaciones
+      description: |
+        Retorna lista paginada de tareas ordenadas por fecha de creación descendente.
+        Soporta filtros opcionales por estado y nombre (búsqueda case-insensitive parcial).
+        No incluye tareas eliminadas (soft-deleted).
+      operationId: listAutomatizaciones
+      parameters:
+        - name: state
+          in: query
+          description: Filtrar por estado
+          schema:
+            $ref: '#/components/schemas/State'
+          example: "IN_PROGRESS"
+        - name: name
+          in: query
+          description: Filtrar por nombre (búsqueda parcial case-insensitive)
+          schema:
+            type: string
+          example: "Facturación"
+        - name: page
+          in: query
+          description: Número de página (comienza en 1)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          description: Cantidad de resultados por página
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+          example: 20
+      responses:
+        '200':
+          description: Lista de tareas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+        '400':
+          description: Parámetros inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /Subtask/{uuid}:
+    put:
+      tags:
+        - Subtareas
+      summary: Actualizar subtarea
+      description: |
+        Actualiza una subtarea individual. Valida que:
+        - La subtarea existe
+        - El estado sea válido
+        - El estado sea consistente con la tarea padre
+        - La transición de estado sea permitida
+      operationId: updateSubtask
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          description: UUID de la subtarea
+          schema:
+            type: string
+            format: uuid
+          example: "660e8400-e29b-41d4-a716-446655440001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSubtaskRequest'
+            example:
+              state: "COMPLETED"
+              updated_by: "Equipo DevOps"
+      responses:
+        '200':
+          description: Subtarea actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subtask'
+        '400':
+          description: Request inválido o transición no permitida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Subtarea no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+    
+    delete:
+      tags:
+        - Subtareas
+      summary: Eliminar subtarea
+      description: Soft delete de subtarea. Se marca como eliminada pero permanece en BD por 30 días.
+      operationId: deleteSubtask
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          description: UUID de la subtarea
+          schema:
+            type: string
+            format: uuid
+          example: "660e8400-e29b-41d4-a716-446655440001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - deleted_by
+              properties:
+                deleted_by:
+                  type: string
+                  description: Nombre del equipo/persona que elimina
+                  maxLength: 256
+              example:
+                deleted_by: "Equipo DevOps"
+      responses:
+        '204':
+          description: Subtarea eliminada exitosamente
+        '404':
+          description: Subtarea no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - database
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          description: Estado general del servicio
+        database:
+          type: string
+          enum: [ok, error]
+          description: Estado de la conexión a base de datos
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp del health check
+      example:
+        status: "healthy"
+        database: "ok"
+        timestamp: "2025-11-27T12:00:00Z"
+
+    State:
+      type: string
+      enum:
+        - PENDING
+        - IN_PROGRESS
+        - COMPLETED
+        - FAILED
+        - CANCELLED
+      description: |
+        Estados de tarea/subtarea:
+        - PENDING: Pendiente de iniciar
+        - IN_PROGRESS: En ejecución
+        - COMPLETED: Completada exitosamente (estado final)
+        - FAILED: Fallida (estado final)
+        - CANCELLED: Cancelada (estado final)
+
+    Task:
+      type: object
+      required:
+        - id
+        - name
+        - state
+        - subtasks
+        - created_by
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único de la tarea
+        name:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: '^[a-zA-Z0-9 _-]+$'
+          description: Nombre de la tarea (alfanumérico con espacios, guiones y guiones bajos)
+        state:
+          $ref: '#/components/schemas/State'
+        subtasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subtask'
+          description: Lista de subtareas
+        created_by:
+          type: string
+          maxLength: 256
+          description: Nombre del equipo/persona que creó la tarea
+        updated_by:
+          type: string
+          maxLength: 256
+          description: Nombre del equipo/persona que actualizó la tarea
+        start_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de inicio (se asigna al pasar a IN_PROGRESS)
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de finalización (se asigna en estados finales)
+        created_at:
+          type: string
+          format: date-time
+          description: Fecha de creación
+        updated_at:
+          type: string
+          format: date-time
+          description: Fecha de última actualización
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de eliminación (soft delete)
+      example:
+        id: "550e8400-e29b-41d4-a716-446655440000"
+        name: "Proceso Facturación"
+        state: "IN_PROGRESS"
+        subtasks:
+          - id: "660e8400-e29b-41d4-a716-446655440001"
+            name: "Validar datos"
+            state: "COMPLETED"
+            start_date: "2025-11-27T10:00:00Z"
+            end_date: "2025-11-27T10:15:00Z"
+            created_at: "2025-11-27T10:00:00Z"
+            updated_at: "2025-11-27T10:15:00Z"
+          - id: "660e8400-e29b-41d4-a716-446655440002"
+            name: "Generar PDF"
+            state: "IN_PROGRESS"
+            start_date: "2025-11-27T10:15:00Z"
+            created_at: "2025-11-27T10:00:00Z"
+            updated_at: "2025-11-27T10:15:00Z"
+        created_by: "Equipo Finanzas"
+        updated_by: "Equipo Finanzas"
+        start_date: "2025-11-27T10:00:00Z"
+        created_at: "2025-11-27T10:00:00Z"
+        updated_at: "2025-11-27T10:15:00Z"
+
+    Subtask:
+      type: object
+      required:
+        - id
+        - name
+        - state
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único de la subtarea
+        name:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: '^[a-zA-Z0-9 _-]+$'
+          description: Nombre de la subtarea
+        state:
+          $ref: '#/components/schemas/State'
+        start_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de inicio
+        end_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de finalización
+        created_at:
+          type: string
+          format: date-time
+          description: Fecha de creación
+        updated_at:
+          type: string
+          format: date-time
+          description: Fecha de última actualización
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de eliminación
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - name
+        - created_by
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: '^[a-zA-Z0-9 _-]+$'
+          description: Nombre de la tarea
+        state:
+          $ref: '#/components/schemas/State'
+          default: PENDING
+        created_by:
+          type: string
+          maxLength: 256
+          description: Nombre del equipo/persona que crea la tarea
+        subtasks:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+            properties:
+              name:
+                type: string
+                minLength: 1
+                maxLength: 256
+                pattern: '^[a-zA-Z0-9 _-]+$'
+              state:
+                $ref: '#/components/schemas/State'
+                default: PENDING
+          description: Lista de subtareas a crear
+
+    UpdateTaskRequest:
+      type: object
+      required:
+        - id
+        - updated_by
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: UUID de la tarea a actualizar
+        name:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: '^[a-zA-Z0-9 _-]+$'
+          description: Nuevo nombre (opcional)
+        state:
+          $ref: '#/components/schemas/State'
+          description: Nuevo estado (opcional)
+        updated_by:
+          type: string
+          maxLength: 256
+          description: Nombre del equipo/persona que actualiza
+        subtasks:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+                description: UUID de subtarea existente (para actualizar)
+              name:
+                type: string
+                minLength: 1
+                maxLength: 256
+                pattern: '^[a-zA-Z0-9 _-]+$'
+                description: Nombre (requerido si es nueva subtarea)
+              state:
+                $ref: '#/components/schemas/State'
+                description: Nuevo estado
+          description: Lista de subtareas (actualizar existentes o añadir nuevas)
+
+    UpdateSubtaskRequest:
+      type: object
+      required:
+        - updated_by
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: '^[a-zA-Z0-9 _-]+$'
+          description: Nuevo nombre (opcional)
+        state:
+          $ref: '#/components/schemas/State'
+          description: Nuevo estado (opcional)
+        updated_by:
+          type: string
+          maxLength: 256
+          description: Nombre del equipo/persona que actualiza
+
+    TaskListResponse:
+      type: object
+      required:
+        - tasks
+        - pagination
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+          description: Lista de tareas
+        pagination:
+          type: object
+          required:
+            - page
+            - limit
+            - total
+            - total_pages
+          properties:
+            page:
+              type: integer
+              description: Página actual
+            limit:
+              type: integer
+              description: Resultados por página
+            total:
+              type: integer
+              description: Total de resultados
+            total_pages:
+              type: integer
+              description: Total de páginas
+      example:
+        tasks:
+          - id: "550e8400-e29b-41d4-a716-446655440000"
+            name: "Proceso Facturación"
+            state: "COMPLETED"
+            subtasks: []
+            created_by: "Equipo Finanzas"
+            created_at: "2025-11-27T10:00:00Z"
+            updated_at: "2025-11-27T12:00:00Z"
+        pagination:
+          page: 1
+          limit: 20
+          total: 45
+          total_pages: 3
+
+    ProblemDetails:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI que identifica el tipo de problema
+          example: "https://api.grupoapi.com/problems/invalid-state-transition"
+        title:
+          type: string
+          description: Resumen breve del problema
+          example: "Invalid State Transition"
+        status:
+          type: integer
+          description: Código de estado HTTP
+          example: 400
+        detail:
+          type: string
+          description: Explicación detallada del problema
+          example: "Cannot transition from COMPLETED to PENDING. Final states cannot be reverted."
+        instance:
+          type: string
+          format: uri
+          description: URI de la request específica
+          example: "/Automatizacion"
+      description: Formato de error según RFC 7807 (Problem Details for HTTP APIs)
