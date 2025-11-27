@@ -38,8 +38,8 @@ func NewSubtask(name string) (*Subtask, error) {
 	}, nil
 }
 
-// validateName valida que el nombre cumpla con las reglas
-func validateName(name string) error {
+// ValidateName valida que el nombre cumpla con las reglas
+func ValidateName(name string) error {
 	if name == "" {
 		return fmt.Errorf("%w: name cannot be empty", ErrInvalidName)
 	}
@@ -50,6 +50,11 @@ func validateName(name string) error {
 		return fmt.Errorf("%w: name contains invalid characters", ErrInvalidName)
 	}
 	return nil
+}
+
+// validateName is a private wrapper for ValidateName for backward compatibility
+func validateName(name string) error {
+	return ValidateName(name)
 }
 
 // IsDeleted verifica si la subtarea está eliminada
