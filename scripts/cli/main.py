@@ -6,7 +6,7 @@ from commands.task import task
 
 
 @click.group()
-@click.version_option(version='1.0.0', prog_name='automatizacion-cli')
+@click.version_option(version='1.0.1', prog_name='automatizacion-cli')
 def cli():
     """CLI de consulta para la API de Automatizaciones.
 

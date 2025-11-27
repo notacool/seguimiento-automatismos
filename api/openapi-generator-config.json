@@ -1,7 +1,7 @@
 {
   "packageName": "automatizacion_client",
   "projectName": "automatizacion-client",
-  "packageVersion": "1.0.0",
+  "packageVersion": "1.0.1",
   "hideGenerationTimestamp": true,
   "generateSourceCodeOnly": false,
   "library": "urllib3",
