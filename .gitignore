@@ -69,4 +69,5 @@ build/
 *.spec
 
 # PyInstaller
-*.manifest
+# Ignorar settings locales de Claude
+.claude/settings.local.json
