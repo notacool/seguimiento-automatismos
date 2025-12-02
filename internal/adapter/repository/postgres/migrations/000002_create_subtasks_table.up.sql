@@ -32,9 +32,7 @@ CREATE INDEX idx_subtasks_deleted_at ON subtasks(deleted_at) WHERE deleted_at IS
 -- Create composite index for task + state queries
 CREATE INDEX idx_subtasks_task_state ON subtasks(task_id, state) WHERE deleted_at IS NULL;
 
--- Create index for soft delete cleanup (pg_cron job)
-CREATE INDEX idx_subtasks_cleanup ON subtasks(deleted_at)
-    WHERE deleted_at IS NOT NULL AND deleted_at < NOW() - INTERVAL '30 days';
+-- [REMOVED] No se puede usar NOW() en el predicado de un índice en PostgreSQL. El cleanup se debe hacer con una consulta programada.
 
 -- Add comments to table
 COMMENT ON TABLE subtasks IS 'Subtasks table for granular tracking of task steps';

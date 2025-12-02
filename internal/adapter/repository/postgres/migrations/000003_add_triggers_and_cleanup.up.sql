@@ -1,7 +1,5 @@
--- Enable pg_cron extension (requires superuser privileges)
-CREATE EXTENSION IF NOT EXISTS pg_cron;
+-- [REMOVED] pg_cron no disponible en la imagen actual. El job debe programarse externamente si se requiere.
 
--- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -10,19 +8,16 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger for tasks table
 CREATE TRIGGER update_tasks_updated_at
     BEFORE UPDATE ON tasks
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Trigger for subtasks table
 CREATE TRIGGER update_subtasks_updated_at
     BEFORE UPDATE ON subtasks
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Function to cleanup old soft-deleted records
 CREATE OR REPLACE FUNCTION cleanup_soft_deleted_records()
 RETURNS void AS $$
 DECLARE
@@ -47,15 +42,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Schedule cleanup job to run daily at 2:00 AM
--- Note: This requires the database user to have permissions to use pg_cron
-SELECT cron.schedule(
-    'cleanup-soft-deletes',           -- job name
-    '0 2 * * *',                      -- cron schedule (daily at 2 AM)
-    'SELECT cleanup_soft_deleted_records();'  -- SQL command
-);
+-- [REMOVED] El job programado con pg_cron debe implementarse externamente si se requiere.
 
--- Add comment
 COMMENT ON FUNCTION cleanup_soft_deleted_records() IS
     'Permanently deletes tasks and subtasks that have been soft-deleted for more than 30 days';
 COMMENT ON FUNCTION update_updated_at_column() IS

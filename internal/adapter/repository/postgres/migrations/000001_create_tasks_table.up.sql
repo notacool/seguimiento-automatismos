@@ -32,9 +32,7 @@ CREATE INDEX idx_tasks_created_at ON tasks(created_at DESC) WHERE deleted_at IS 
 CREATE INDEX idx_tasks_name ON tasks(name) WHERE deleted_at IS NULL;
 CREATE INDEX idx_tasks_deleted_at ON tasks(deleted_at) WHERE deleted_at IS NOT NULL;
 
--- Create index for soft delete cleanup (pg_cron job)
-CREATE INDEX idx_tasks_cleanup ON tasks(deleted_at)
-    WHERE deleted_at IS NOT NULL AND deleted_at < NOW() - INTERVAL '30 days';
+-- [REMOVED] No se puede usar NOW() en el predicado de un índice en PostgreSQL. El cleanup se debe hacer con una consulta programada.
 
 -- Add comment to table
 COMMENT ON TABLE tasks IS 'Main tasks table for automation process tracking';
