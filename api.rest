@@ -1,12 +1,12 @@
 ### Healthcheck
 GET http://localhost:8080/health
 
-### Crear tarea
+### 1. Crear tarea con subtareas
 POST http://localhost:8080/Automatizacion
 Content-Type: application/json
 
 {
-  "name": "Tarea de ejemplo",
+  "name": "Flujo de prueba estados",
   "created_by": "equipo1",
   "subtasks": [
     { "name": "Subtarea 1", "state": "PENDING" },
@@ -14,25 +14,21 @@ Content-Type: application/json
   ]
 }
 
-### Consultar tarea por UUID
-GET http://localhost:8080/Automatizacion/{{uuid}}
+### 2. Consultar tarea creada (copiar UUID del response anterior)
+GET http://localhost:8080/Automatizacion/{{taskUUID}}
 
-### Modificar tarea
+### 3. Poner tarea en progreso
 PUT http://localhost:8080/Automatizacion
 Content-Type: application/json
 
 {
-  "id": "{{uuid}}",
-  "name": "Tarea modificada",
-  "updated_by": "equipo2",
-  "state": "IN_PROGRESS"
+  "id": "{{taskUUID}}",
+  "state": "IN_PROGRESS",
+  "updated_by": "equipo1"
 }
 
-### Listado de tareas (con filtros)
-GET http://localhost:8080/AutomatizacionListado?state=PENDING&name=ejemplo&page=1&limit=20
-
-### Modificar subtarea
-PUT http://localhost:8080/Subtask/{{subtaskUUID}}
+### 4. Completar primera subtarea (copiar UUID de subtarea del response del GET)
+PUT http://localhost:8080/Subtask/{{subtaskUUID1}}
 Content-Type: application/json
 
 {
@@ -40,6 +36,24 @@ Content-Type: application/json
   "updated_by": "equipo1"
 }
 
-### Eliminar subtarea
+### 5. Verificar estado de la tarea (debería seguir IN_PROGRESS)
+GET http://localhost:8080/Automatizacion/{{taskUUID}}
+
+### 6. Completar segunda subtarea (esto debería auto-completar la tarea padre)
+PUT http://localhost:8080/Subtask/{{subtaskUUID2}}
+Content-Type: application/json
+
+{
+  "state": "COMPLETED",
+  "updated_by": "equipo1"
+}
+
+### 7. Verificar estado final de la tarea (debería estar COMPLETED automáticamente)
+GET http://localhost:8080/Automatizacion/{{taskUUID}}
+
+### Listado de tareas
+GET http://localhost:8080/AutomatizacionListado?page=1&limit=20
+
+### Eliminar subtarea (ejemplo)
 DELETE http://localhost:8080/Subtask/{{subtaskUUID}}
 
