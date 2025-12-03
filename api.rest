@@ -1,0 +1,45 @@
+### Healthcheck
+GET http://localhost:8080/health
+
+### Crear tarea
+POST http://localhost:8080/Automatizacion
+Content-Type: application/json
+
+{
+  "name": "Tarea de ejemplo",
+  "created_by": "equipo1",
+  "subtasks": [
+    { "name": "Subtarea 1", "state": "PENDING" },
+    { "name": "Subtarea 2", "state": "PENDING" }
+  ]
+}
+
+### Consultar tarea por UUID
+GET http://localhost:8080/Automatizacion/{{uuid}}
+
+### Modificar tarea
+PUT http://localhost:8080/Automatizacion
+Content-Type: application/json
+
+{
+  "id": "{{uuid}}",
+  "name": "Tarea modificada",
+  "updated_by": "equipo2",
+  "state": "IN_PROGRESS"
+}
+
+### Listado de tareas (con filtros)
+GET http://localhost:8080/AutomatizacionListado?state=PENDING&name=ejemplo&page=1&limit=20
+
+### Modificar subtarea
+PUT http://localhost:8080/Subtask/{{subtaskUUID}}
+Content-Type: application/json
+
+{
+  "state": "COMPLETED",
+  "updated_by": "equipo1"
+}
+
+### Eliminar subtarea
+DELETE http://localhost:8080/Subtask/{{subtaskUUID}}
+
