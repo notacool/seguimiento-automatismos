@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile
+    container_name: proceslog-api-dev
+    ports:
+      - "${API_PORT}:${API_PORT}"
+    environment:
+      - PORT=${API_PORT}
+      - GIN_MODE=${GIN_MODE}
+      - DATABASE_HOST=${DATABASE_HOST}
+      - DATABASE_PORT=${DATABASE_PORT}
+      - DATABASE_USER=${DATABASE_USER}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - DATABASE_SSLMODE=${DATABASE_SSLMODE}
+      - DATABASE_MAX_CONNS=${DATABASE_MAX_CONNS}
+      - DATABASE_MIN_CONNS=${DATABASE_MIN_CONNS}
+      - DATABASE_MAX_CONN_LIFETIME=${DATABASE_MAX_CONN_LIFETIME}
+      - DATABASE_MAX_CONN_IDLE_TIME=${DATABASE_MAX_CONN_IDLE_TIME}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:${API_PORT}/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped

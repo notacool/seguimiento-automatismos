@@ -1,4 +1,4 @@
-.PHONY: help build test test-unit test-integration test-e2e test-all test-coverage run docker-up docker-down docker-logs docker-build migrate-up migrate-down migrate-create lint fmt fmt-check clean deps detect-container-runtime
+.PHONY: help build test test-unit test-integration test-e2e test-all test-coverage run docker-up docker-down docker-dev-up docker-dev-down docker-test-up docker-test-down docker-logs docker-build migrate-up migrate-down migrate-create lint fmt fmt-check clean deps detect-container-runtime
 
 # Cargar variables de entorno desde .env si existe
 -include .env
@@ -55,6 +55,11 @@ help: ## Mostrar ayuda
 	@echo "Contenedores:"
 	@echo "  make docker-up         - Levantar servicios con Docker/Podman Compose"
 	@echo "  make docker-down       - Bajar servicios Docker/Podman Compose"
+	@echo "  make docker-dev-up     - Levantar solo API (BD externa)"
+	@echo "  make docker-dev-down   - Bajar API de desarrollo"
+	@echo "  make docker-test-up    - Levantar entorno de testing"
+	@echo "  make docker-test-down  - Bajar entorno de testing"
+	@echo "  make docker-clean      - Limpiar contenedores y volúmenes"
 	@echo "  make docker-logs       - Ver logs de Docker/Podman Compose"
 	@echo "  make docker-build      - Construir imagen Docker/Podman"
 	@echo "  make detect-container-runtime - Detectar runtime de contenedores"
@@ -263,3 +268,19 @@ cli-build-linux: ## Generar ejecutable CLI para Linux
 docker-clean: ## Apaga y elimina contenedores y volúmenes de Docker
 	@echo "Apagando y eliminando contenedores y volúmenes de Docker..."
 	docker-compose -f deployments/docker/docker-compose.yml down -v
+
+docker-dev-up: ## Levantar solo API para desarrollo (BD externa)
+	@echo "Usando: $(CONTAINER_RUNTIME)"
+	$(CONTAINER_CMD) -f deployments/docker/docker-compose.dev.yml up -d
+
+docker-dev-down: ## Bajar API de desarrollo
+	@echo "Usando: $(CONTAINER_RUNTIME)"
+	$(CONTAINER_CMD) -f deployments/docker/docker-compose.dev.yml down
+
+docker-test-up: ## Levantar entorno de testing completo
+	@echo "Usando: $(CONTAINER_RUNTIME)"
+	$(CONTAINER_CMD) -f deployments/docker/docker-compose.test.yml up -d
+
+docker-test-down: ## Bajar entorno de testing
+	@echo "Usando: $(CONTAINER_RUNTIME)"
+	$(CONTAINER_CMD) -f deployments/docker/docker-compose.test.yml down

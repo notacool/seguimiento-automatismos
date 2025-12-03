@@ -1,0 +1,88 @@
+version: "3.8"
+
+services:
+  migrate-test:
+    image: docker.io/migrate/migrate:latest
+    container_name: proceslog-migrate-test
+    command:
+      - "-path"
+      - "/migrations"
+      - "-database"
+      - "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-test:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
+      - "up"
+    volumes:
+      - ../../internal/adapter/repository/postgres/migrations:/migrations
+    depends_on:
+      db-test:
+        condition: service_healthy
+    networks:
+      - proceslog-test-network
+    restart: "no"
+
+  api-test:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile
+    container_name: proceslog-api-test
+    ports:
+      - "8081:8080"
+    environment:
+      - PORT=8080
+      - GIN_MODE=debug
+      - DATABASE_HOST=db-test
+      - DATABASE_PORT=${POSTGRES_PORT}
+      - DATABASE_USER=${POSTGRES_USER}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+      - DATABASE_NAME=${POSTGRES_DB}
+      - DATABASE_SSLMODE=disable
+      - DATABASE_MAX_CONNS=10
+      - DATABASE_MIN_CONNS=2
+      - DATABASE_MAX_CONN_LIFETIME=5m
+      - DATABASE_MAX_CONN_IDLE_TIME=1m
+    depends_on:
+      migrate-test:
+        condition: service_completed_successfully
+      db-test:
+        condition: service_healthy
+    networks:
+      - proceslog-test-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  db-test:
+    image: docker.io/library/postgres:16-alpine
+    container_name: proceslog-db-test
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    networks:
+      - proceslog-test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+networks:
+  proceslog-test-network:
+    driver: bridge
