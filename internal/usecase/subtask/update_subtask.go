@@ -98,6 +98,24 @@ func (uc *UpdateSubtaskUseCase) Execute(ctx context.Context, input UpdateSubtask
 		return nil, fmt.Errorf("failed to persist subtask updates: %w", err)
 	}
 
+	// Si la subtarea pasó a estado final, verificar si todas las subtareas están completas
+	// para completar automáticamente la tarea padre
+	if input.State != nil && input.State.IsFinal() {
+		// Obtener el ID de la tarea padre
+		parentTaskID, err := uc.subtaskRepo.FindParentTaskID(ctx, subtask.ID)
+		if err == nil {
+			// Recargar la tarea padre para tener subtareas actualizadas
+			parentTask, err := uc.taskRepo.FindByID(ctx, parentTaskID)
+			if err == nil {
+				if err := uc.checkAndCompleteParentTask(ctx, parentTask, input.UpdatedBy); err != nil {
+					// Log el error pero no fallar la operación principal
+					// La subtarea ya fue actualizada exitosamente
+					fmt.Printf("Warning: failed to auto-complete parent task: %v\n", err)
+				}
+			}
+		}
+	}
+
 	return &UpdateSubtaskOutput{Subtask: subtask}, nil
 }
 
@@ -132,4 +150,53 @@ func (uc *UpdateSubtaskUseCase) findParentTask(ctx context.Context, subtaskID uu
 	}
 
 	return task, nil
+}
+
+// checkAndCompleteParentTask verifica si todas las subtareas están completas
+// y completa automáticamente la tarea padre si es necesario
+func (uc *UpdateSubtaskUseCase) checkAndCompleteParentTask(ctx context.Context, task *entity.Task, updatedBy string) error {
+	// Solo proceder si la tarea está en IN_PROGRESS
+	if task.State != entity.StateInProgress {
+		return nil // No hay nada que hacer
+	}
+
+	// Obtener todas las subtareas de la tarea
+	subtasks, err := uc.subtaskRepo.FindByTaskID(ctx, task.ID, false) // false = no incluir eliminadas
+	if err != nil {
+		return fmt.Errorf("failed to find subtasks: %w", err)
+	}
+
+	// Si no hay subtareas, no hay nada que hacer
+	if len(subtasks) == 0 {
+		return nil
+	}
+
+	// Verificar si todas las subtareas están en estado final exitoso (COMPLETED)
+	allCompleted := true
+	for _, subtask := range subtasks {
+		if subtask.State != entity.StateCompleted {
+			allCompleted = false
+			break
+		}
+	}
+
+	// Si todas las subtareas están completas, completar la tarea padre
+	if allCompleted {
+		// Validar que la transición sea válida
+		if err := uc.stateMachine.ValidateTaskStateTransition(task, entity.StateCompleted); err != nil {
+			return fmt.Errorf("invalid transition to complete parent task: %w", err)
+		}
+
+		// Actualizar estado y fechas
+		task.State = entity.StateCompleted
+		task.SetEndDate()
+		task.UpdatedAt = time.Now()
+
+		// Persistir los cambios
+		if err := uc.taskRepo.Update(ctx, task); err != nil {
+			return fmt.Errorf("failed to update parent task: %w", err)
+		}
+	}
+
+	return nil
 }

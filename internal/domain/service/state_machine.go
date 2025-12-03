@@ -90,13 +90,10 @@ func (sm *StateMachine) ValidateSubtaskStateTransition(task *entity.Task, subtas
 			entity.ErrInconsistentParentChildState)
 	}
 
-	// Una subtarea no puede alcanzar un estado final si el padre no está en estado final
-	if newState.IsFinal() && !task.State.IsFinal() {
-		return fmt.Errorf("%w: subtask cannot reach final state %s when parent is %s",
-			entity.ErrInconsistentParentChildState, newState, task.State)
-	}
-
-	// Validar la transición básica al final
+	// Las subtareas SÍ PUEDEN completarse antes que la tarea padre
+	// Esta es la lógica correcta: subtareas → tarea padre
+	
+	// Validar la transición básica
 	return sm.ValidateTransition(subtask.State, newState)
 }
 
