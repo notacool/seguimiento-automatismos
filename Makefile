@@ -257,3 +257,9 @@ cli-build-linux: ## Generar ejecutable CLI para Linux
 	cd scripts/cli && source venv/bin/activate && pyinstaller --onefile --name automatizacion-cli-linux main.py
 
 .DEFAULT_GOAL := help
+
+.PHONY: docker-clean
+
+docker-clean: ## Apaga y elimina contenedores y volúmenes de Docker
+	@echo "Apagando y eliminando contenedores y volúmenes de Docker..."
+	docker-compose -f deployments/docker/docker-compose.yml down -v
