@@ -92,7 +92,7 @@ func (sm *StateMachine) ValidateSubtaskStateTransition(task *entity.Task, subtas
 
 	// Las subtareas SÍ PUEDEN completarse antes que la tarea padre
 	// Esta es la lógica correcta: subtareas → tarea padre
-	
+
 	// Validar la transición básica
 	return sm.ValidateTransition(subtask.State, newState)
 }
