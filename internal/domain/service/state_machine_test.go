@@ -302,7 +302,31 @@ func TestStateMachine_ValidateSubtaskStateTransition(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("invalid: subtask COMPLETED when parent IN_PROGRESS", func(t *testing.T) {
+	t.Run("valid: subtask can COMPLETE when parent IN_PROGRESS", func(t *testing.T) {
+		task, _ := entity.NewTask("Test Task", "Team A")
+		task.State = entity.StateInProgress
+
+		subtask, _ := entity.NewSubtask("Subtask 1")
+		subtask.State = entity.StateInProgress
+		task.AddSubtask(subtask)
+
+		err := sm.ValidateSubtaskStateTransition(task, subtask, entity.StateCompleted)
+		require.NoError(t, err)
+	})
+
+	t.Run("valid: subtask can FAIL when parent IN_PROGRESS", func(t *testing.T) {
+		task, _ := entity.NewTask("Test Task", "Team A")
+		task.State = entity.StateInProgress
+
+		subtask, _ := entity.NewSubtask("Subtask 1")
+		subtask.State = entity.StateInProgress
+		task.AddSubtask(subtask)
+
+		err := sm.ValidateSubtaskStateTransition(task, subtask, entity.StateFailed)
+		require.NoError(t, err)
+	})
+
+	t.Run("valid: subtask transitions from PENDING to COMPLETED via IN_PROGRESS when parent allows", func(t *testing.T) {
 		task, _ := entity.NewTask("Test Task", "Team A")
 		task.State = entity.StateInProgress
 
@@ -310,9 +334,14 @@ func TestStateMachine_ValidateSubtaskStateTransition(t *testing.T) {
 		subtask.State = entity.StatePending
 		task.AddSubtask(subtask)
 
-		err := sm.ValidateSubtaskStateTransition(task, subtask, entity.StateCompleted)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "subtask cannot reach final state COMPLETED when parent is IN_PROGRESS")
+		// First transition: PENDING -> IN_PROGRESS (should fail because parent is not IN_PROGRESS yet)
+		err := sm.ValidateSubtaskStateTransition(task, subtask, entity.StateInProgress)
+		require.NoError(t, err, "subtask should be able to start when parent is IN_PROGRESS")
+
+		// Second transition: IN_PROGRESS -> COMPLETED (should work with new logic)
+		subtask.State = entity.StateInProgress
+		err = sm.ValidateSubtaskStateTransition(task, subtask, entity.StateCompleted)
+		require.NoError(t, err, "subtask should be able to complete when parent is IN_PROGRESS")
 	})
 
 	t.Run("invalid: basic transition validation for subtask", func(t *testing.T) {
