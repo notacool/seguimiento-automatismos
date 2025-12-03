@@ -8,7 +8,7 @@ services:
       - "-path"
       - "/migrations"
       - "-database"
-      - "postgres://postgres:postgres@db:5432/proceslog?sslmode=disable"
+      - "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
       - "up"
     volumes:
       - ../../internal/adapter/repository/postgres/migrations:/migrations
@@ -27,13 +27,13 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - PORT=8080
-      - GIN_MODE=release
+      - PORT=${API_PORT}
+      - GIN_MODE=${GIN_MODE}
       - DATABASE_HOST=db
-      - DATABASE_PORT=5432
-      - DATABASE_USER=postgres
-      - DATABASE_PASSWORD=postgres
-      - DATABASE_NAME=proceslog
+      - DATABASE_PORT=${POSTGRES_PORT}
+      - DATABASE_USER=${POSTGRES_USER}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+      - DATABASE_NAME=${POSTGRES_DB}
       - DATABASE_SSLMODE=disable
       - DATABASE_MAX_CONNS=25
       - DATABASE_MIN_CONNS=5
@@ -66,9 +66,9 @@ services:
     image: docker.io/library/postgres:16-alpine
     container_name: proceslog-db
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=proceslog
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
